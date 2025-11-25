@@ -1,6 +1,3 @@
-include "DateTimeConstant.dfy"
-include "../Collections/SeqExt.dfy"
-
 module Std.Duration {
   import opened DateTimeConstant
   import opened Strings
@@ -30,9 +27,6 @@ module Std.Duration {
   function FromMilliseconds(ms: uint32): Duration
     ensures FromMilliseconds(ms).Valid()
   {
-    /**
-    Duration((ms / (MILLISECONDS_PER_SECOND as uint32)) as uint16,
-             (ms % (MILLISECONDS_PER_SECOND as uint32)) as uint16)*/
     var ms64 := ms as uint64;
     var secondsValue := ms64 / (MILLISECONDS_PER_SECOND as uint64);
     assume  {:axiom} secondsValue < 65536;
@@ -40,13 +34,12 @@ module Std.Duration {
 
     var millisValue := ms64 % (MILLISECONDS_PER_SECOND as uint64);
     assume  {:axiom} millisValue < 65536;
-    //var seconds :=( ms64 / (MILLISECONDS_PER_SECOND as uint64)) as uint16;
     var millis := millisValue as uint16;
     Duration(seconds, millis)
   }
 
 
-/// Compare two durations: returns -1 (less), 0 (equal), 1 (greater)
+  // Compare two durations: returns -1 (less), 0 (equal), 1 (greater)
   function Compare(d1: Duration, d2: Duration): int
     requires d1.Valid() && d2.Valid()
   {
@@ -57,13 +50,11 @@ module Std.Duration {
     else 0
   }
 
-
   function Less(d1: Duration, d2: Duration): bool
     requires d1.Valid() && d2.Valid()
   {
     ToTotalMilliseconds(d1) < ToTotalMilliseconds(d2)
   }
-
 
   function LessOrEqual(d1: Duration, d2: Duration): bool
     requires d1.Valid() && d2.Valid()
@@ -71,7 +62,7 @@ module Std.Duration {
     ToTotalMilliseconds(d1) <= ToTotalMilliseconds(d2)
   }
 
-/// Add two durations
+  // Add two durations
   function Plus(d1: Duration, d2: Duration): Duration
     requires d1.Valid() && d2.Valid()
     requires ToTotalMilliseconds(d1) + ToTotalMilliseconds(d2) <= (0xFFFFFFFF as uint64)
@@ -90,20 +81,15 @@ module Std.Duration {
   {
     var ms1 := ToTotalMilliseconds(d1);
     var ms2 := ToTotalMilliseconds(d2);
-    // var sub := ms1 - ms2;
-    // assume  {:axiom} sub < 65536;
-
     FromMilliseconds((ms1 - ms2) as uint32)
   }
 
-/// Scale duration by a factor
+  // Scale duration by a factor
   function Scale(d: Duration, factor: uint32): Duration
     requires d.Valid()
-    //requires (ToTotalMilliseconds(d) as uint64) * (factor as uint64) <= (0xFFFFFFFF as uint64)
     ensures Scale(d, factor).Valid()
   {
     var ms := ToTotalMilliseconds(d);
-    //assert ms >= 0;  /
     assume {:axiom} ms >=0;
     assume {:axiom} ms <= 0xFFFFFFFF;
     assume {:axiom} factor <= 0xFFFFFFFF;
@@ -113,7 +99,7 @@ module Std.Duration {
     FromMilliseconds(product as uint32)
   }
 
-/// Divide duration by a divisor
+  // Divide duration by a divisor
   function Divide(d: Duration, divisor: uint32): Duration
     requires d.Valid() && divisor > 0
     ensures Divide(d, divisor).Valid()
@@ -121,7 +107,7 @@ module Std.Duration {
     FromMilliseconds((ToTotalMilliseconds(d) / (divisor as uint64)) as uint32)
   }
 
-/// Modulo operation on durations
+  // Modulo operation on durations
   function Mod(d1: Duration, d2: Duration): Duration
     requires d1.Valid() && d2.Valid() && ToTotalMilliseconds(d2) > 0
     ensures Mod(d1, d2).Valid()
@@ -129,8 +115,7 @@ module Std.Duration {
     FromMilliseconds((ToTotalMilliseconds(d1) % ToTotalMilliseconds(d2)) as uint32)
   }
 
-
-/// Maximum of two durations
+  // Maximum of two durations
   function Max(d1: Duration, d2: Duration): Duration
     requires d1.Valid() && d2.Valid()
     ensures Max(d1, d2).Valid()
@@ -138,7 +123,7 @@ module Std.Duration {
     if Less(d1, d2) then d2 else d1
   }
 
-/// Minimum of two durations
+  // Minimum of two durations
   function Min(d1: Duration, d2: Duration): Duration
     requires d1.Valid() && d2.Valid()
     ensures Min(d1, d2).Valid()
@@ -213,7 +198,7 @@ module Std.Duration {
 
   function GetMilliseconds(d: Duration): uint16 { d.millis }
 
-/// Convert duration to ISO 8601 format: PT[H]H[M]M[S]S.sssS
+  // Convert duration to ISO 8601 format: PT[H]H[M]M[S]S.sssS
   function ToString(d: Duration): string
     requires d.Valid()
   {
@@ -225,7 +210,7 @@ module Std.Duration {
     OfInt(d.millis as int) + "S"
   }
 
-/// Helper to safely find a character in a string
+  // Helper to safely find a character in a string
   function FindCharOrNeg(text: string, ch: char): int
   {
     match IndexOfOption(text, ch)
@@ -252,7 +237,6 @@ module Std.Duration {
       assume {:axiom} digit >= 0;
       assume {:axiom} pow >= 0;
       digit * pow + ParseString
-    //digit * (Pow(10, |s| - 1)) + ParseNumericString(s[1..])
   }
 
 
@@ -263,8 +247,8 @@ module Std.Duration {
       0
     else
       var substr := text[start..end];
-      assert |substr| == end - start;  // ADD THIS
-      assert |substr| > 0;  // ADD THIS - since start < end
+      assert |substr| == end - start;
+      assert |substr| > 0;
       if IsNumeric(substr) then
         var parsed := ParseNumericString(substr);
         assume {:axiom} parsed <= 0xFFFFFFFF;
@@ -333,8 +317,8 @@ module Std.Duration {
   }
 
 
-/// Test MaxBy with a sequence of durations
-/// This function demonstrates finding the maximum duration in a sequence
+  // Test MaxBy with a sequence of durations
+  // This function demonstrates finding the maximum duration in a sequence
   function MaxByDuration(durations: seq<Duration>): Duration
     requires |durations| > 0
     requires forall i :: 0 <= i < |durations| ==> durations[i].Valid()
@@ -342,8 +326,8 @@ module Std.Duration {
     MaxBy(durations, Compare)
   }
 
-/// Test MinBy with a sequence of durations
-/// This function demonstrates finding the minimum duration in a sequence
+  // Test MinBy with a sequence of durations
+  // This function demonstrates finding the minimum duration in a sequence
   function MinByDuration(durations: seq<Duration>): Duration
     requires |durations| > 0
     requires forall i :: 0 <= i < |durations| ==> durations[i].Valid()
@@ -373,7 +357,6 @@ module Std.Duration {
     } else {
       // Recursive case: next is either current or s[idx], both valid
       var next := if Compare(current, s[idx]) < 0 then s[idx] else current;
-      assert next.Valid();
       LemmaMaxByHelperReturnsValid(s, idx + 1, next);
     }
   }
@@ -398,7 +381,6 @@ module Std.Duration {
     } else {
       // Recursive case: next is either current or s[idx], both valid
       var next := if Compare(current, s[idx]) > 0 then s[idx] else current;
-      assert next.Valid();
       LemmaMinByHelperReturnsValid(s, idx + 1, next);
     }
   }
