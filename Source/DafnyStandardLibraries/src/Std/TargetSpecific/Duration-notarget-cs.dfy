@@ -40,7 +40,7 @@ module Std.Duration {
 
 
   // Compare two durations: returns -1 (less), 0 (equal), 1 (greater)
-  function Compare(d1: Duration, d2: Duration): int
+  function {:total} Compare(d1: Duration, d2: Duration): int
     requires d1.Valid() && d2.Valid()
   {
     var ms1 := ToTotalMilliseconds(d1);
@@ -87,15 +87,11 @@ module Std.Duration {
   // Scale duration by a factor
   function Scale(d: Duration, factor: uint32): Duration
     requires d.Valid()
+    requires ToTotalMilliseconds(d) * (factor as uint64) <= (0xFFFFFFFF as uint64)
     ensures Scale(d, factor).Valid()
   {
     var ms := ToTotalMilliseconds(d);
-    assume {:axiom} ms >=0;
-    assume {:axiom} ms <= 0xFFFFFFFF;
-    assume {:axiom} factor <= 0xFFFFFFFF;
-    var product := (ms as uint64) * (factor as uint64);
-
-    assume {:axiom} product <= 0xFFFFFFFF;
+    var product := ms * (factor as uint64);
     FromMilliseconds(product as uint32)
   }
 
@@ -305,9 +301,6 @@ module Std.Duration {
     Duration(totalSeconds, millisecond as uint16)
   }
 
-
-
-
   function EpochDifference(epoch1: uint32, epoch2: uint32): Duration
     ensures EpochDifference(epoch1, epoch2).Valid()
   {
@@ -323,7 +316,7 @@ module Std.Duration {
     requires |durations| > 0
     requires forall i :: 0 <= i < |durations| ==> durations[i].Valid()
   {
-    MaxBy(durations, Compare)
+    MaxBy(durations, (d1: Duration, d2: Duration) requires d1.Valid() && d2.Valid() => Compare(d1, d2))
   }
 
   // Test MinBy with a sequence of durations
@@ -332,7 +325,7 @@ module Std.Duration {
     requires |durations| > 0
     requires forall i :: 0 <= i < |durations| ==> durations[i].Valid()
   {
-    MinBy(durations, Compare)
+    MinBy(durations, (d1: Duration, d2: Duration) requires d1.Valid() && d2.Valid() => Compare(d1, d2))
   }
 
 
@@ -349,7 +342,7 @@ module Std.Duration {
     requires idx <= |s|
     requires current.Valid()
     requires forall i :: 0 <= i < |s| ==> s[i].Valid()
-    ensures MaxByHelper(s, idx, current, Compare).Valid()
+    ensures MaxByHelper(s, idx, current, (d1: Duration, d2: Duration) requires d1.Valid() && d2.Valid() => Compare(d1, d2)).Valid()
     decreases |s| - idx
   {
     if idx == |s| {
@@ -373,7 +366,7 @@ module Std.Duration {
     requires idx <= |s|
     requires current.Valid()
     requires forall i :: 0 <= i < |s| ==> s[i].Valid()
-    ensures MinByHelper(s, idx, current, Compare).Valid()
+    ensures MinByHelper(s, idx, current, (d1: Duration, d2: Duration) requires d1.Valid() && d2.Valid() => Compare(d1, d2)).Valid()
     decreases |s| - idx
   {
     if idx == |s| {
